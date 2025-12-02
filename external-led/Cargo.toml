@@ -1,17 +1,25 @@
 [package]
 name = "external-led"
-version = "0.1.0"
-edition = "2021"
+version = "0.2.0"
+edition = "2024"
 
 [dependencies]
-cortex-m = "0.7.2"
-cortex-m-rt = "0.7"
+# Cortex-M 
+cortex-m = "0.7.7"
+cortex-m-rt = "0.7.5"
+
+# Panic Handler
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+
 embedded-hal = "1.0.0"
-rp235x-hal = { git = "https://github.com/rp-rs/rp-hal", version = "0.2.0", features = [
+rp235x-hal = { version = "0.3.0", features = [
   "binary-info",
   "critical-section-impl",
   "rt",
   "defmt",
 ] }
-panic-halt = "0.2.0"
-rp-binary-info = "0.1.0"
+rp-binary-info = "0.1.1"
+
+# Defmt Logging
+defmt = "1.0.1"
+defmt-rtt = "1.1.0"

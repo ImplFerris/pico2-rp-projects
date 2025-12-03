@@ -54,7 +54,7 @@ rustflags = [
   "link-arg=-Tlink.x",
   "-C",
   "link-arg=-Tdefmt.x",
-]
+  ]
 
 # Use picotool for loading.
 #

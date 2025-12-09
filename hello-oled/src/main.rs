@@ -1,34 +1,48 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
-use rp235x_hal as hal;
-use hal::block::ImageDef;
 use embedded_hal::delay::DelayNs;
+use hal::block::ImageDef;
+use rp235x_hal as hal;
 
+//Panic Handler
+use panic_probe as _;
+// Defmt Logging
+use defmt_rtt as _;
 
-/// Tell the Boot ROM about our application
-#[link_section = ".start_block"]
-#[used]
-pub static IMAGE_DEF: ImageDef = hal::block::ImageDef::secure_exe();
+// Embedded Graphics
+use embedded_graphics::mono_font::MonoTextStyleBuilder;
+use embedded_graphics::mono_font::ascii::FONT_6X10;
+use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::prelude::*;
+use embedded_graphics::text::{Baseline, Text};
 
-const XTAL_FREQ_HZ: u32 = 12_000_000u32;
-
+// For setting the Frequency
 use hal::fugit::RateExtU32;
 use hal::gpio::{FunctionI2C, Pin};
-use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
-use embedded_graphics::prelude::*;
-use embedded_graphics::mono_font::ascii::FONT_6X10;
-use embedded_graphics::mono_font::MonoTextStyleBuilder;
-use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::text::{Baseline, Text};
+
+// SSD1306 Display
+use ssd1306::{I2CDisplayInterface, Ssd1306, prelude::*};
+
+/// Tell the Boot ROM about our application
+#[unsafe(link_section = ".start_block")]
+#[used]
+pub static IMAGE_DEF: ImageDef = hal::block::ImageDef::secure_exe();
+/// External high-speed crystal on the Raspberry Pi Pico 2 board is 12 MHz.
+/// Adjust if your board has a different frequency
+const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
 #[hal::entry]
 fn main() -> ! {
+    // Grab our singleton objects
     let mut pac = hal::pac::Peripherals::take().unwrap();
 
+    // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
+    // Configure the clocks
+    //
+    // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
         XTAL_FREQ_HZ,
         pac.XOSC,
@@ -41,8 +55,10 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
+    // The single-cycle I/O block controls our GPIO pins
     let sio = hal::Sio::new(pac.SIO);
 
+    // Set the pins up according to their function on this particular board
     let pins = hal::gpio::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
@@ -52,11 +68,13 @@ fn main() -> ! {
 
     let mut timer = hal::Timer::new_timer0(pac.TIMER0, &mut pac.RESETS, &clocks);
 
-    // The logic for the I2C & OLED starts here
-
+    // Configure two pins as being I²C, not GPIO
     let sda_pin: Pin<_, FunctionI2C, _> = pins.gpio18.reconfigure();
     let scl_pin: Pin<_, FunctionI2C, _> = pins.gpio19.reconfigure();
 
+    // Create the I²C drive, using the two pre-configured pins. This will fail
+    // at compile time if the pins are in the wrong mode, or if this I²C
+    // peripheral isn't available on these pins!
     let i2c = hal::I2C::i2c1(
         pac.I2C1,
         sda_pin,
@@ -66,39 +84,45 @@ fn main() -> ! {
         &clocks.system_clock,
     );
 
+    //helper struct is provided by the ssd1306 crate
     let interface = I2CDisplayInterface::new(i2c);
-
+    // initialize the display
     let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
         .into_buffered_graphics_mode();
+    display.init().expect("failed to initialize the display");
 
-    display.init().unwrap();
+    // Embedded graphics
     let text_style = MonoTextStyleBuilder::new()
         .font(&FONT_6X10)
         .text_color(BinaryColor::On)
         .build();
 
-    Text::with_baseline("Hello, Rust!", Point::new(0, 16), text_style, Baseline::Top)
-        .draw(&mut display)
-        .unwrap();
+    Text::with_baseline(
+        "Hello, Rusty!",
+        Point::new(0, 16),
+        text_style,
+        Baseline::Top,
+    )
+    .draw(&mut display)
+    .expect("failed to draw text to display");
 
-    display.flush().unwrap();
+    display.flush().expect("failed to flush data to display");
 
     loop {
-        timer.delay_ms(500);
+        timer.delay_ms(100);
     }
-
 }
-
 
 // Program metadata for `picotool info`.
 // This isn't needed, but it's recomended to have these minimal entries.
-#[link_section = ".bi_entries"]
+#[unsafe(link_section = ".bi_entries")]
 #[used]
 pub static PICOTOOL_ENTRIES: [hal::binary_info::EntryAddr; 5] = [
     hal::binary_info::rp_cargo_bin_name!(),
     hal::binary_info::rp_cargo_version!(),
-    hal::binary_info::rp_program_description!(c"PWM Blinky Example"),
+    hal::binary_info::rp_program_description!(c"your program description"),
     hal::binary_info::rp_cargo_homepage_url!(),
     hal::binary_info::rp_program_build_attribute!(),
 ];
 
+// End of file

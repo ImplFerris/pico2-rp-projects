@@ -5,6 +5,11 @@
 # writing programs for Raspberry Silicon microcontrollers.
 #
 
+[env]
+# for the defmt logging
+DEFMT_LOG = "debug"
+
+
 [build]
 # Set the default target to match the Cortex-M33 in the RP2350
 target = "thumbv8m.main-none-eabihf"
@@ -30,8 +35,6 @@ rustflags = [
   "-C",
   "link-arg=-Tlink.x",
   "-C",
-  "link-arg=-Tdefmt.x",
-  "-C",
   "target-cpu=cortex-m33",
 ]
 
@@ -47,14 +50,7 @@ runner = "picotool load -u -v -x -t elf"
 # results on the `f32` benchmark.
 [target.thumbv8m.main-none-eabi]
 # Pass some extra options to rustc. See above for descriptions.
-rustflags = [
-  "-C",
-  "link-arg=--nmagic",
-  "-C",
-  "link-arg=-Tlink.x",
-  "-C",
-  "link-arg=-Tdefmt.x",
-]
+rustflags = ["-C", "link-arg=--nmagic", "-C", "link-arg=-Tlink.x"]
 
 # Use picotool for loading.
 #
@@ -76,14 +72,7 @@ runner = "picotool load -u -v -x -t elf"
 #   `link.x` automatically. This is the reverse of how we do it on Cortex-M.
 # * linker argument -Tdefmt.x also tells the linker to use `defmt.x` as a
 #   secondary linker script. This is required to make defmt_rtt work.
-rustflags = [
-  "-C",
-  "link-arg=--nmagic",
-  "-C",
-  "link-arg=-Trp235x_riscv.x",
-  "-C",
-  "link-arg=-Tdefmt.x",
-]
+rustflags = ["-C", "link-arg=--nmagic", "-C", "link-arg=-Trp235x_riscv.x"]
 
 # Use picotool for loading.
 #

@@ -1,5 +1,5 @@
 [package]
-name = "rfid-read"
+name = "read-blocks"
 version = "0.1.0"
 edition = "2021"
 
